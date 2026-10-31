@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle del libro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-50 p-6 md:p-10">
+
+    <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-md border border-gray-200 p-6 md:p-8">
+
+        {% if libro.imagen_url %}
+        <img src="{{ libro.imagen_url }}" alt="Portada de {{ libro.titulo }}" class="w-36 h-52 object-cover rounded-lg shadow mb-5">
+        {% endif %}
+        <h2 class="text-3xl font-bold text-black mb-4">{{ libro.titulo }}</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 bg-blue-50 p-4 rounded-lg border border-gray-100">
+            <p><strong>Autor:</strong> <span class="text-gray-600">{{ libro.autor }}</span></p>
+            <p><strong>Año:</strong> <span class="text-gray-600">{{ libro.año }}</span></p>
+            <p>
+                <strong>Estado:</strong> 
+                {% if libro.disponible %} 
+                    <span class="bg-green-100 text-gray-600 text-lg font-bold px-2.5 py-1 rounded-lg">Disponible</span> 
+                {% else %} 
+                    <span class="bg-red-100 text-gray-600 text-lg font-bold px-2.5 py-1 rounded-lg">Prestado</span> 
+                {% endif %}
+            </p>
+        </div>
+
+        <form action="{% url 'libros:registrar_prestamo' libro.id %}" method="post" class="mb-6 bg-blue-50 p-5 rounded-lg border border-blue-100">
+            {% csrf_token %}
+            <fieldset>
+                <legend class="text-lg font-semibold text-black mb-3">
+                    Registrar Nuevo Préstamo
+                </legend>
+
+                {% if error_message %}
+                <p class="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm"><strong>{{ error_message }}</strong></p>
+                {% endif %}
+
+                <div class="mb-4">
+                    <label for="persona" class="block text-sm font-medium text-black mb-1">Nombre de la persona:</label>
+                    <input type="text" name="persona" id="persona" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div class="mb-4">
+                    <label for="fecha" class="block text-sm font-medium text-black mb-1">Fecha (YYYY-MM-DD):</label>
+                    <input type="date" name="fecha" id="fecha" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </fieldset>
+            <input type="submit" value="Guardar Préstamo" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg shadow transition cursor-pointer">
+        </form>
+
+        <hr class="my-6">
+
+        <p class="flex gap-4 text-sm font-bold mb-6">
+            <a href="{% url 'libros:editar_libro' libro.id %}" class="text-black hover:underline">✏️ Editar este libro</a> |
+            <a href="{% url 'libros:eliminar_libro' libro.id %}" class="text-black hover:underline">🗑️ Eliminar este libro</a>
+        </p>
+
+        <hr class="my-6">
+
+        <h2 class="text-xl font-bold text-black mb-4">Información del préstamo</h2>
+
+        <div class="space-y-3 mb-6">
+            {% for prestamo in libro.prestamo_set.all %}
+            <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg">
+                <p class="text-sm">
+                    <strong class="text-gray-700">Persona:</strong>
+                    <span class="text-gray-600">{{ prestamo.persona }}</span>
+                </p>
+                <p class="text-sm">
+                    <strong class="text-gray-700">Fecha:</strong>
+                    <span class="text-gray-600">{{ prestamo.fecha }}</span>
+                </p>
+            </div>
+            {% empty %}
+            <p class="text-gray-500 italic">
+                Este libro no tiene préstamos registrados.
+            </p>
+            {% endfor %}
+        </div>
+
+        <br>
+
+        <a href="{% url 'libros:inicio' %}" class="inline-block text-blue-600 hover:underline font-medium">
+            ← Volver a la biblioteca
+        </a>
+
+    </div>
+
+</body>
+
+</html>

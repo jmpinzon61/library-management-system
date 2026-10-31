@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eliminar Libro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-6 md:p-10 flex items-center justify-center min-h-screen">
+
+    <div class="max-w-md w-full bg-white rounded-xl shadow-md border border-gray-200 p-6 md:p-8 text-center">
+        <div class="text-red-500 text-4xl mb-3">⚠️</div>
+        <h1 class="text-xl font-bold text-gray-800 mb-6">¿Estás seguro de que deseas eliminar el libro?</h1>
+
+        <form action="{% url 'libros:eliminar_libro' libro.id %}" method="post" class="space-y-3">
+            {% csrf_token %}
+            <input type="submit" value="Sí, eliminar" class="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 rounded-lg shadow transition cursor-pointer">
+        </form>
+        
+        <div class="mt-4">
+            <a href="{% url 'libros:detalle' libro.id %}" class="text-sm text-gray-600 hover:underline font-medium">Cancelar</a>
+        </div>
+    </div>
+
+</body>
+</html>
