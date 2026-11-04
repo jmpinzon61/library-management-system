@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro | Biblioteca</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-blue-900 text-white shadow-md">
+        <div class="max-w-5xl mx-auto px-5 py-5 flex items-center">
+            <img
+                src="https://d3nmwx7scpuzgc.cloudfront.net/sites/default/files/media/image/blaa-rgb-blanco.png"
+                alt="Biblioteca Luis Ángel Arango"
+                class="h-12 object-contain"
+            >
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto p-6 md:pt-12">
+        <section class="bg-white rounded-xl shadow-md border border-gray-200 p-6 md:p-8">
+            <h1 class="text-2xl font-bold text-gray-800 mb-2">Crear cuenta</h1>
+            <p class="text-gray-600 mb-6">Completa tus datos para crear una cuenta de lector.</p>
+
+            {% if registration_success %}
+                <div class="mb-4 rounded-lg p-3 bg-green-100 text-green-800">
+                    Registro completado. Ahora inicia sesión con tu cuenta.
+                </div>
+            {% endif %}
+
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                {% for field in form %}
+                    <div>
+                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            {{ field.label }}
+                        </label>
+                        {{ field }}
+                        {% if field.help_text %}
+                            <div class="text-xs text-gray-500 mt-1">{{ field.help_text|safe }}</div>
+                        {% endif %}
+                        {% if field.errors %}
+                            <div class="text-sm text-red-600 mt-1">{{ field.errors }}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg shadow transition">
+                    Registrarse
+                </button>
+            </form>
+
+            <p class="text-center text-sm text-gray-600 mt-6">
+                ¿Ya tienes cuenta?
+                <a href="{% url 'libros:login' %}" class="text-blue-600 hover:underline font-medium">
+                    Iniciar sesión
+                </a>
+            </p>
+        </section>
+    </main>
+</body>
+</html>

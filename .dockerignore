@@ -1,0 +1,11 @@
+.git
+.env
+.dockerignore
+.venv
+env
+**/env
+**/.dockerignore
+**/__pycache__
+*.py[cod]
+**/db.sqlite3
+**/staticfiles

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Préstamos vencidos | Biblioteca</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-blue-900 text-white shadow-md">
+        <div class="max-w-5xl mx-auto px-5 py-5 flex items-center justify-between">
+            <h1 class="text-xl font-bold">Préstamos vencidos</h1>
+            <a href="{% url 'libros:inicio' %}" class="underline">Volver a la biblioteca</a>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto p-6 md:p-8">
+        <p class="text-gray-600 mb-6">
+            Préstamos activos cuya fecha prevista de devolución ya pasó.
+        </p>
+
+        <section class="space-y-4">
+            {% for prestamo in prestamos %}
+            <article class="bg-white rounded-xl shadow border border-red-200 p-5">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold">
+                            <a class="text-blue-700 hover:underline" href="{% url 'libros:detalle' prestamo.libro_id %}">
+                                {{ prestamo.libro.titulo }}
+                            </a>
+                        </h2>
+                        <p class="text-gray-700">Lector: {{ prestamo.persona }}</p>
+                        <p class="text-sm text-gray-600">
+                            Préstamo: {{ prestamo.fecha|date:"d/m/Y" }}
+                            · Devolución prevista: {{ prestamo.fecha_devolucion_prevista|date:"d/m/Y" }}
+                        </p>
+                        <p class="text-sm font-semibold text-red-700 mt-1">Vencido y aún activo</p>
+                    </div>
+                    <form method="post" action="{% url 'libros:registrar_devolucion' prestamo.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg">
+                            Registrar devolución
+                        </button>
+                    </form>
+                </div>
+            </article>
+            {% empty %}
+            <p class="bg-white rounded-xl border border-gray-200 p-5 text-gray-600">
+                No hay préstamos vencidos.
+            </p>
+            {% endfor %}
+        </section>
+    </main>
+</body>
+</html>

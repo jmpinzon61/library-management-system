@@ -12,8 +12,23 @@
         <div class="max-w-5xl mx-5 py-5 flex items-center gap-4">
             <div class="w-auto h-auto rounded-lg flex items-center justify-center shrink-0 overflow-hidden"
                 aria-label="Escudo de la biblioteca">
-                <img class="w-lg h-16 image-render-[pixelated]" src="https://d3nmwx7scpuzgc.cloudfront.net/sites/default/files/media/image/blaa-rgb-blanco.png"
+                <img class="w-lg h-16 image-render-[pixelated]" src="{{ escudo_url }}"
                     alt="Escudo de la biblioteca" class="w-full h-full object-contain">
+            </div>
+            <div class="ml-auto flex items-center gap-4">
+                <span>{{ user.username }}</span>
+                {% if user.is_staff and perms.auth.view_user %}
+                <a href="{% url 'admin:index' %}" class="underline">Administración</a>
+                {% endif %}
+                {% if perms.libros.view_prestamo and perms.libros.change_prestamo %}
+                <a href="{% url 'libros:prestamos_vencidos' %}" class="underline">
+                    Préstamos vencidos{% if cantidad_prestamos_vencidos %} ({{ cantidad_prestamos_vencidos }}){% endif %}
+                </a>
+                {% endif %}
+                <form action="{% url 'libros:logout' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="underline">Cerrar sesión</button>
+                </form>
             </div>
         </div>
     </header>
@@ -38,7 +53,7 @@
                     </div>
 
                     <div>
-                        <a href="/libros/{{ libro.id }}/" class="text-blue-600 font-bold hover:underline text-lg">
+                        <a href="{% url 'libros:detalle' libro.id %}" class="text-blue-600 font-bold hover:underline text-lg">
                             {{ libro.titulo }}
                         </a>
                         <span class="text-gray-600 ml-2">- {{ libro.autor }}</span>
@@ -61,12 +76,14 @@
 
         <hr class="mb-6">
 
+        {% if perms.libros.add_libro %}
         <p>
             <a href="{% url 'libros:crear_libro' %}"
                 class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg shadow transition duration-200 inline-block">
                 Registrar un nuevo libro
             </a>
         </p>
+        {% endif %}
     </main>
 </body>
 
