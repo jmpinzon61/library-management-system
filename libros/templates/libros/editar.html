@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Libro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-6 md:p-10 flex items-center justify-center min-h-screen">
+
+    <div class="max-w-md w-full bg-white rounded-xl shadow-md border border-gray-200 p-6 md:p-8">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">Editar Libro</h1>
+
+        {% if error_message %}
+            <p class="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm"><strong>{{ error_message }}</strong></p>
+        {% endif %}
+
+        <form action="{% url 'libros:editar_libro' libro.id %}" method="post">
+            {% csrf_token %}
+            <fieldset class="space-y-4 mb-6">
+                <div>
+                    <label for="titulo" class="block text-sm font-medium text-gray-700 mb-1">Título:</label>
+                    <input type="text" name="titulo" id="titulo" value="{{ libro.titulo }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label for="autor" class="block text-sm font-medium text-gray-700 mb-1">Autor:</label>
+                    <input type="text" name="autor" id="autor" value="{{ libro.autor }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label for="año" class="block text-sm font-medium text-gray-700 mb-1">Año:</label>
+                    <input type="number" name="año" id="año" value="{{ libro.año }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label for="imagen_url" class="block text-sm font-medium text-gray-700 mb-1">URL de la portada:</label>
+                    <input type="url" name="imagen_url" id="imagen_url" value="{{ imagen_url }}" placeholder="pegar la dirección de la imagen" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div class="flex items-center gap-2 pt-2">
+                    <input type="checkbox" name="disponible" id="disponible" {% if libro.disponible %}checked{% endif %} class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                    <label for="disponible" class="text-sm font-medium text-gray-700">Disponible</label>
+                </div>
+            </fieldset>
+
+            <input type="submit" value="Guardar" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg shadow transition cursor-pointer mb-4">
+        </form>
+
+        <div class="text-center">
+            <a href="{% url 'libros:detalle' libro.id %}" class="text-sm text-blue-600 hover:underline font-medium">Cancelar</a>
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,90 @@
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biblioteca</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-50">
+    <header class="bg-blue-900 text-white shadow-md">
+        <div class="max-w-5xl mx-5 py-5 flex items-center gap-4">
+            <div class="w-auto h-auto rounded-lg flex items-center justify-center shrink-0 overflow-hidden"
+                aria-label="Escudo de la biblioteca">
+                <img class="w-lg h-16 image-render-[pixelated]" src="{{ escudo_url }}"
+                    alt="Escudo de la biblioteca" class="w-full h-full object-contain">
+            </div>
+            <div class="ml-auto flex items-center gap-4">
+                <span>{{ user.username }}</span>
+                {% if user.is_staff and perms.auth.view_user %}
+                <a href="{% url 'admin:index' %}" class="underline">Administración</a>
+                {% endif %}
+                {% if perms.libros.view_prestamo and perms.libros.change_prestamo %}
+                <a href="{% url 'libros:prestamos_vencidos' %}" class="underline">
+                    Préstamos vencidos{% if cantidad_prestamos_vencidos %} ({{ cantidad_prestamos_vencidos }}){% endif %}
+                </a>
+                {% endif %}
+                <form action="{% url 'libros:logout' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="underline">Cerrar sesión</button>
+                </form>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-2xl mx-auto p-6 md:p-8">
+        <h2 class="text-xl font-bold text-black mb-6">Libros registrados</h2>
+
+        {% if libros %}
+
+        <ul class="space-y-3 mb-6">
+            {% for libro in libros %}
+            <li class="bg-white p-4 rounded-lg shadow border border-gray-200 flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <div
+                        class="w-24 h-18 bg-gray-200 rounded overflow-hidden shadow-sm flex items-center justify-center text-xs text-gray-400 shrink-0">
+                        {% if libro.imagen_url %}
+                        <img src="{{ libro.imagen_url }}" alt="Portada de {{ libro.titulo }}" loading="lazy"
+                            class="w-full h-full object-cover">
+                        {% else %}
+                        <span class="text-xs text-gray-400 px-1">Sin imagen</span>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <a href="{% url 'libros:detalle' libro.id %}" class="text-blue-600 font-bold hover:underline text-lg">
+                            {{ libro.titulo }}
+                        </a>
+                        <span class="text-gray-600 ml-2">- {{ libro.autor }}</span>
+                    </div>
+                </div>
+
+                <div>
+                    {% if libro.disponible %}
+                    <strong class="bg-green-100 text-black text-lg px-3 py-1 rounded-lg">Disponible</strong>
+                    {% else %}
+                    <strong class="bg-red-100 text-black text-lg px-3 py-1 rounded-lg">Prestado</strong>
+                    {% endif %}
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-gray-500 mb-6">No hay libros registrados.</p>
+        {% endif %}
+
+        <hr class="mb-6">
+
+        {% if perms.libros.add_libro %}
+        <p>
+            <a href="{% url 'libros:crear_libro' %}"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg shadow transition duration-200 inline-block">
+                Registrar un nuevo libro
+            </a>
+        </p>
+        {% endif %}
+    </main>
+</body>
+
+</html>
