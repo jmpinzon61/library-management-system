@@ -7,7 +7,114 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.management import call_command
 from django.utils import timezone
+from .forms import (
+    LibroForm,
+    LoginForm,
+    PrestamoForm,
+    RegistroUsuarioForm,
+)
 from .models import Libro, Prestamo
+
+
+class MensajesDeValidacionTests(TestCase):
+    def test_login_muestra_mensaje_claro_en_espanol(self):
+        form = LoginForm(data={"username": "usuario", "password": "clave"})
+
+        self.assertFalse(form.is_valid())
+        self.assertIn(
+            "El usuario o la contraseña no son correctos.",
+            form.non_field_errors()[0],
+        )
+
+    def test_registro_muestra_errores_en_espanol(self):
+        form = RegistroUsuarioForm(
+            data={
+                "username": "usuario_nuevo",
+                "password1": "Una-clave-segura-123",
+                "password2": "Otra-clave-segura-123",
+                "rol": "Lector",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn(
+            "Las contraseñas no coinciden.",
+            form.errors["password2"][0],
+        )
+
+    def test_registro_rechaza_un_rol_que_no_esta_en_la_lista(self):
+        form = RegistroUsuarioForm(
+            data={
+                "username": "usuario_nuevo",
+                "password1": "Una-clave-segura-123",
+                "password2": "Una-clave-segura-123",
+                "rol": "Administrador",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn(
+            "Selecciona uno de los perfiles disponibles.",
+            form.errors["rol"][0],
+        )
+
+    def test_libro_muestra_error_de_url_en_espanol(self):
+        form = LibroForm(
+            data={
+                "titulo": "Libro",
+                "autor": "Autor",
+                "año": 2024,
+                "imagen_url": "no-es-una-url",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn(
+            "Escribe una dirección web válida",
+            form.errors["imagen_url"][0],
+        )
+
+    def test_libro_acepta_anio_de_cuatro_digitos_como_1967(self):
+        form = LibroForm(
+            data={
+                "titulo": "Cien años de soledad",
+                "autor": "Gabriel García Márquez",
+                "año": "1967",
+                "imagen_url": "",
+                "disponible": "on",
+            }
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["año"], 1967)
+        self.assertEqual(form.fields["año"].widget.input_type, "number")
+        self.assertEqual(form.fields["año"].widget.attrs["min"], 1000)
+        self.assertEqual(form.fields["año"].widget.attrs["max"], 9999)
+
+    def test_libro_rechaza_anios_que_no_tengan_cuatro_digitos(self):
+        for año in ("967", "10000"):
+            with self.subTest(año=año):
+                form = LibroForm(
+                    data={
+                        "titulo": "Libro",
+                        "autor": "Autor",
+                        "año": año,
+                        "disponible": "on",
+                    }
+                )
+
+                self.assertFalse(form.is_valid())
+                self.assertIn("año", form.errors)
+
+    def test_prestamo_muestra_errores_de_fecha_en_espanol(self):
+        form = PrestamoForm(data={"fecha": "fecha-invalida"})
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("fecha válida", form.errors["fecha"][0])
+        self.assertIn(
+            "fecha prevista de devolución",
+            form.errors["fecha_devolucion_prevista"][0],
+        )
 
 
 class ImagenLibroTests(TestCase):
@@ -75,7 +182,7 @@ class ImagenLibroTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Ingrese una URL válida.")
+        self.assertContains(response, "Escribe una dirección web válida")
         self.assertEqual(Libro.objects.count(), 1)
 
     @override_settings(BIBLIOTECA_ESCUDO_URL="https://example.com/escudo.png")
@@ -106,7 +213,7 @@ class ImagenLibroTests(TestCase):
             f"{reverse('libros:detalle', args=[self.libro.pk])}",
         )
 
-    def test_login_abre_catalogo_y_detalle_usa_ruta_dinamica(self):
+    def test_login_redirige_administrador_y_detalle_usa_ruta_dinamica(self):
         self.client.logout()
         login_page = self.client.get(reverse("libros:login"))
         self.assertContains(login_page, "Regístrate")
@@ -116,7 +223,7 @@ class ImagenLibroTests(TestCase):
             {"username": "admin", "password": "test-password-123"},
         )
 
-        self.assertRedirects(response, reverse("libros:inicio"))
+        self.assertRedirects(response, reverse("admin:index"))
         response = self.client.get(reverse("libros:inicio"))
         self.assertContains(
             response,
@@ -137,12 +244,11 @@ class ImagenLibroTests(TestCase):
         self.client.logout()
 
         registration_page = self.client.get(reverse("libros:registro"))
-        self.assertContains(registration_page, "cuenta de lector")
-        self.assertNotContains(registration_page, "name=\"rol\"")
-        self.assertContains(
-            registration_page,
-            reverse("libros:login"),
-        )
+        self.assertContains(registration_page, "elige tu perfil")
+        self.assertContains(registration_page, 'name="rol"')
+        self.assertContains(registration_page, "Bibliotecario")
+        self.assertNotContains(registration_page, "Administrador")
+        self.assertContains(registration_page, reverse("libros:login"))
 
         response = self.client.post(
             reverse("libros:registro"),
@@ -150,7 +256,7 @@ class ImagenLibroTests(TestCase):
                 "username": "nuevolector",
                 "password1": "Una-clave-segura-123",
                 "password2": "Una-clave-segura-123",
-                "rol": "Administrador",
+                "rol": "Lector",
             },
         )
 
@@ -160,10 +266,7 @@ class ImagenLibroTests(TestCase):
             fetch_redirect_response=False,
         )
         response = self.client.get(reverse("libros:registro"))
-        self.assertContains(
-            response,
-            "Registro completado. Ahora inicia sesión con tu cuenta.",
-        )
+        self.assertContains(response, "Tu cuenta de lector")
         self.assertContains(response, reverse("libros:login"))
         self.assertNotIn("_auth_user_id", self.client.session)
         usuario = get_user_model().objects.get(username="nuevolector")
@@ -171,6 +274,65 @@ class ImagenLibroTests(TestCase):
         self.assertEqual(
             list(usuario.groups.values_list("name", flat=True)),
             ["Lector"],
+        )
+
+    def test_bibliotecario_se_registra_con_permisos_activos(self):
+        call_command("setup_roles", verbosity=0)
+
+        response = self.client.post(
+            reverse("libros:registro"),
+            {
+                "username": "nuevo_bibliotecario",
+                "password1": "Una-clave-segura-123",
+                "password2": "Una-clave-segura-123",
+                "rol": "Bibliotecario",
+            },
+        )
+        self.assertRedirects(
+            response,
+            reverse("libros:registro"),
+            fetch_redirect_response=False,
+        )
+        registration_result = self.client.get(reverse("libros:registro"))
+        self.assertContains(
+            registration_result,
+            "Tu cuenta de bibliotecario",
+        )
+
+        usuario = get_user_model().objects.get(
+            username="nuevo_bibliotecario"
+        )
+        self.assertEqual(
+            list(usuario.groups.values_list("name", flat=True)),
+            ["Bibliotecario"],
+        )
+        self.assertTrue(usuario.has_perm("libros.add_libro"))
+        self.assertFalse(usuario.is_staff)
+
+        login_response = self.client.post(
+            reverse("libros:login"),
+            {
+                "username": usuario.username,
+                "password": "Una-clave-segura-123",
+            },
+        )
+        self.assertRedirects(login_response, reverse("libros:inicio"))
+        self.assertContains(
+            self.client.get(reverse("libros:inicio")),
+            "Registrar un nuevo libro",
+        )
+        create_response = self.client.post(
+            reverse("libros:crear_libro"),
+            {
+                "titulo": "Libro del bibliotecario",
+                "autor": "Autor",
+                "a\u00f1o": 2025,
+                "disponible": "on",
+            },
+        )
+        self.assertRedirects(create_response, reverse("libros:inicio"))
+        self.assertTrue(
+            Libro.objects.filter(titulo="Libro del bibliotecario").exists()
         )
 
     def test_lector_puede_consultar_catalogo_y_detalle_sin_editar(self):
@@ -315,7 +477,7 @@ class ImagenLibroTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response,
-            "La devolución prevista no puede ser anterior al préstamo.",
+            "La fecha prevista de devolución no puede ser anterior",
         )
         self.assertFalse(Prestamo.objects.exists())
         self.libro.refresh_from_db()
@@ -433,6 +595,7 @@ class ImagenLibroTests(TestCase):
                 "username": "usuario_invalido",
                 "password1": "Una-clave-segura-123",
                 "password2": "Una-clave-segura-123",
+                "rol": "Lector",
             },
         )
 

@@ -6,13 +6,30 @@ from django.contrib.auth.decorators import (
     permission_required,
 )
 from django.contrib.auth.models import Group
+from django.contrib.auth.views import LoginView, LogoutView
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .forms import LibroForm, PrestamoForm, RegistroLectorForm
+from .forms import LibroForm, LoginForm, PrestamoForm, RegistroUsuarioForm
 from .models import Libro, Prestamo
+
+
+class InicioSesionView(LoginView):
+    authentication_form = LoginForm
+    template_name = "libros/login.html"
+
+    def get_success_url(self):
+        redirect_url = self.get_redirect_url()
+        if redirect_url:
+            return redirect_url
+        if self.request.user.is_staff and self.request.user.has_perm(
+            "auth.view_user"
+        ):
+            return reverse("admin:index")
+        return reverse("libros:inicio")
 
 
 @login_required
@@ -68,22 +85,23 @@ def detalle(request, libro_id):
 
 @require_http_methods(["GET", "POST"])
 def registrar_usuario(request):
-    form = RegistroLectorForm(
+    form = RegistroUsuarioForm(
         request.POST if request.method == "POST" else None
     )
-    registration_success = False
+    registration_result = None
 
     if request.method == "POST" and form.is_valid():
         usuario = form.save()
-        grupo, _ = Group.objects.get_or_create(name="Lector")
+        rol = form.cleaned_data["rol"]
+        grupo, _ = Group.objects.get_or_create(name=rol)
         usuario.groups.add(grupo)
-        request.session["registration_success"] = True
+        request.session["registration_result"] = rol
         return redirect("libros:registro")
 
     if request.method == "GET":
-        registration_success = request.session.pop(
-            "registration_success",
-            False,
+        registration_result = request.session.pop(
+            "registration_result",
+            None,
         )
 
     return render(
@@ -91,7 +109,7 @@ def registrar_usuario(request):
         "libros/registro.html",
         {
             "form": form,
-            "registration_success": registration_success,
+            "registration_result": registration_result,
         },
     )
 
