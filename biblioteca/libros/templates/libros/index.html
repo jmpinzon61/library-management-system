@@ -7,33 +7,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-gray-50">
-    <header class="bg-blue-900 text-white shadow-md">
-        <div class="max-w-5xl mx-5 py-5 flex items-center gap-4">
-            <div class="w-auto h-auto rounded-lg flex items-center justify-center shrink-0 overflow-hidden"
-                aria-label="Escudo de la biblioteca">
-                <img class="w-lg h-16 image-render-[pixelated]" src="{{ escudo_url }}"
-                    alt="Escudo de la biblioteca" class="w-full h-full object-contain">
-            </div>
-            <div class="ml-auto flex items-center gap-4">
-                <span>{{ user.username }}</span>
-                {% if user.is_staff and perms.auth.view_user %}
-                <a href="{% url 'admin:index' %}" class="underline">Administración</a>
-                {% endif %}
-                {% if perms.libros.view_prestamo and perms.libros.change_prestamo %}
-                <a href="{% url 'libros:prestamos_vencidos' %}" class="underline">
-                    Préstamos vencidos{% if cantidad_prestamos_vencidos %} ({{ cantidad_prestamos_vencidos }}){% endif %}
-                </a>
-                {% endif %}
-                <form action="{% url 'libros:logout' %}" method="post">
-                    {% csrf_token %}
-                    <button type="submit" class="underline">Cerrar sesión</button>
-                </form>
-            </div>
-        </div>
-    </header>
+<body class="flex min-h-screen flex-col bg-gray-50">
+    {% include "libros/includes/header.html" %}
 
-    <main class="max-w-2xl mx-auto p-6 md:p-8">
+    <main class="mx-auto w-full max-w-2xl flex-grow p-6 md:p-8">
         <h2 class="text-xl font-bold text-black mb-6">Libros registrados</h2>
 
         {% if libros %}
@@ -85,6 +62,7 @@
         </p>
         {% endif %}
     </main>
+    {% include "libros/includes/footer.html" %}
 </body>
 
 </html>

@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.test import override_settings
@@ -430,6 +431,7 @@ class ImagenLibroTests(TestCase):
             lector.pk,
         )
         prestamo = nuevo_libro.prestamo_set.get()
+        self.assertEqual(prestamo.persona, lector.username)
         self.assertEqual(
             prestamo.fecha_devolucion_prevista,
             date(2026, 11, 18),
@@ -564,6 +566,153 @@ class ImagenLibroTests(TestCase):
         self.assertContains(
             self.client.get(reverse("libros:inicio")),
             "Préstamos vencidos (1)",
+        )
+
+    @patch(
+        "libros.views.get_overdue_notifications",
+        return_value=[
+            {
+                "bookTitle": "Libro vencido",
+                "borrower": "lector de prueba",
+                "dueDate": "2026-10-30",
+            }
+        ],
+    )
+    def test_administrador_puede_ver_alertas_internas(
+        self,
+        get_notifications,
+    ):
+        response = self.client.get(reverse("libros:prestamos_vencidos"))
+
+        self.assertContains(response, "Alertas internas")
+        self.assertContains(response, "Libro vencido")
+        self.assertContains(response, "lector de prueba")
+        get_notifications.assert_called_once_with()
+
+    @patch("libros.views.sync_overdue_notifications")
+    def test_bibliotecario_envia_alertas_vencidas_al_microservicio(
+        self,
+        sync_alerts,
+    ):
+        call_command("setup_roles", verbosity=0)
+        bibliotecario = get_user_model().objects.create_user(
+            username="bibliotecario_alertas",
+            password="test-password-123",
+        )
+        bibliotecario.groups.add(Group.objects.get(name="Bibliotecario"))
+        due_date = timezone.localdate() - timedelta(days=1)
+        prestamo = Prestamo.objects.create(
+            libro=self.libro,
+            persona="lector de prueba",
+            fecha=due_date - timedelta(days=7),
+            fecha_devolucion_prevista=due_date,
+        )
+        self.client.force_login(bibliotecario)
+
+        response = self.client.post(
+            reverse("libros:procesar_alertas_vencidas")
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("libros:prestamos_vencidos"),
+        )
+        sync_alerts.assert_called_once_with(
+            [
+                {
+                    "loanId": prestamo.pk,
+                    "bookTitle": self.libro.titulo,
+                    "borrower": prestamo.persona,
+                    "dueDate": due_date.isoformat(),
+                }
+            ]
+        )
+
+    @patch("libros.views.sync_overdue_notifications")
+    def test_prestamo_vencido_sin_lector_envia_etiqueta_explicita(
+        self,
+        sync_alerts,
+    ):
+        call_command("setup_roles", verbosity=0)
+        bibliotecario = get_user_model().objects.create_user(
+            username="bibliotecario_sin_lector",
+            password="test-password-for-alerts",
+        )
+        bibliotecario.groups.add(Group.objects.get(name="Bibliotecario"))
+        due_date = timezone.localdate() - timedelta(days=1)
+        prestamo = Prestamo.objects.create(
+            libro=self.libro,
+            persona="",
+            fecha=due_date - timedelta(days=7),
+            fecha_devolucion_prevista=due_date,
+        )
+        self.client.force_login(bibliotecario)
+
+        response = self.client.post(
+            reverse("libros:procesar_alertas_vencidas")
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("libros:prestamos_vencidos"),
+        )
+        sync_alerts.assert_called_once_with(
+            [
+                {
+                    "loanId": prestamo.pk,
+                    "bookTitle": self.libro.titulo,
+                    "borrower": "Lector sin identificar",
+                    "dueDate": due_date.isoformat(),
+                }
+            ]
+        )
+        self.assertContains(
+            self.client.get(reverse("libros:prestamos_vencidos")),
+            "Lector sin identificar",
+        )
+
+    @patch(
+        "libros.views.generate_recommendations",
+        return_value="Libro recomendado: Cien años de soledad.",
+    )
+    def test_asistente_ia_envia_catalogo_disponible_al_microservicio(
+        self,
+        generate_recommendations_mock,
+    ):
+        response = self.client.post(
+            reverse("libros:asistente_ia"),
+            {"pregunta": "Quiero una novela colombiana"},
+        )
+        self.assertContains(response, "Libro recomendado")
+        self.assertContains(response, "Recomendación bibliográfica generada por IA")
+        generate_recommendations_mock.assert_called_once()
+        question, catalog = generate_recommendations_mock.call_args.args
+        self.assertEqual(question, "Quiero una novela colombiana")
+        self.assertEqual(catalog[0]["id"], self.libro.id)
+        self.assertEqual(catalog[0]["title"], self.libro.titulo)
+
+    @patch(
+        "libros.views.generate_book_summary",
+        return_value="Resumen generado para validar la integración.",
+    )
+    def test_detalle_solicita_resumen_ia_al_microservicio(
+        self,
+        generate_book_summary_mock,
+    ):
+        response = self.client.post(
+            reverse("libros:resumen_ia", args=[self.libro.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Resumen generado para validar")
+        self.assertContains(response, "Resumen bibliográfico generado por IA")
+        generate_book_summary_mock.assert_called_once_with(
+            {
+                "id": self.libro.id,
+                "title": self.libro.titulo,
+                "author": self.libro.autor,
+                "year": self.libro.año,
+            }
         )
 
     def test_administrador_con_acceso_staff_puede_gestionar_usuarios(self):

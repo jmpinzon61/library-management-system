@@ -17,26 +17,21 @@ Solución web desarrollada para automatizar el control de inventario de libros y
 * **DevOps:** Docker, Docker Compose, Render / Railway
 * **Documentación:** Swagger / OpenAPI, Estándar IEEE 830 (SRS)
 
-## Construir y ejecutar con Docker
+## Ejecutar con Docker Compose
 
-Ejecuta estos comandos desde la raíz del repositorio. El contexto de
-construcción es la raíz porque ahí está `requirements.txt`; el Dockerfile está
-dentro de `biblioteca/`:
+Desde la raíz, copia `.env.example` a `.env` y reemplaza los valores de
+`DJANGO_SECRET_KEY` y `NODE_SERVICE_TOKEN` por valores largos de desarrollo.
+Agrega una clave de Google AI Studio a `GEMINI_API_KEY` para probar las
+funciones de IA. No subas `.env` a Git.
 
 ```powershell
-docker build -f biblioteca/Dockerfile -t biblioteca-app .
-docker run --rm -p 8000:8000 `
-  -e DEBUG=true `
-  -e ALLOWED_HOSTS=localhost,127.0.0.1 `
-  -e DB_PATH=/data/db.sqlite3 `
-  -v biblioteca_data:/data `
-  biblioteca-app
+docker compose up --build
 ```
 
-La aplicación queda disponible en `http://localhost:8000/`. El volumen
-`biblioteca_data` conserva SQLite al recrear el contenedor. No uses SQLite
-como base de datos de producción si la plataforma no ofrece almacenamiento
-persistente.
+Compose levanta PostgreSQL, Django y el microservicio Node.js. Django queda
+disponible en `http://localhost:8000/`; Swagger UI público para la red local
+queda en `http://localhost:3000/docs`. El volumen `biblioteca_db` conserva la
+base local al detener los contenedores.
 
 ## Variables para producción
 
@@ -64,3 +59,30 @@ y levanta Gunicorn al iniciar.
 El Blueprint usa planes gratuitos para la demo. Render indica que su base
 PostgreSQL gratuita vence a los 30 días y que el disco local de los servicios
 gratuitos es efímero; no lo uses como almacenamiento permanente.
+
+## Entrega 3: microservicio, Swagger y asistencia con IA
+
+El microservicio Node.js está en `microservicios/alertas`. Su documentación
+OpenAPI/Swagger se sirve públicamente en `/docs` y el esquema JSON en
+`/openapi.json`. La API contiene endpoints para sincronizar/listar alertas
+internas de préstamos vencidos y para generar recomendaciones y resúmenes con
+Gemini. Los endpoints internos requieren `NODE_SERVICE_TOKEN`; no publiques
+ese token ni la clave `GEMINI_API_KEY`.
+
+Django configura la comunicación con `NODE_SERVICE_URL` y
+`NODE_SERVICE_TOKEN`. El botón de procesamiento en la pantalla de préstamos
+vencidos sincroniza las alertas; Bibliotecarios y Administradores pueden
+consultarlas. La recomendación bibliográfica y el resumen del libro se
+solicitan desde la aplicación autenticada.
+
+### Despliegue en Render
+
+El Blueprint agrega el servicio público `biblioteca-alertas-api`; Swagger
+estará en `https://biblioteca-alertas-api.onrender.com/docs`. Al aplicar los
+cambios de `render.yaml`, configura el mismo `NODE_SERVICE_TOKEN` en los
+servicios Django y Node, y configura `GEMINI_API_KEY` solo en Node. Mantén
+estas variables en el dashboard de Render, no en Git.
+
+Genera un token aleatorio de al menos 32 caracteres y coloca exactamente el
+mismo valor en ambos servicios. Las alertas internas se muestran a usuarios
+con permisos de Bibliotecario o Administrador; no se envían por correo.

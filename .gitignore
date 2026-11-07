@@ -8,3 +8,5 @@ __pycache__/
 *.py[cod]
 **/db.sqlite3
 **/staticfiles/
+node_modules/
+**/node_modules/

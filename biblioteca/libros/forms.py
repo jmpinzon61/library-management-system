@@ -188,6 +188,7 @@ class PrestamoForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["usuario"].required = True
         self.fields["usuario"].queryset = (
             get_user_model()
             .objects.filter(groups__name="Lector", is_active=True)
@@ -230,3 +231,27 @@ class PrestamoForm(forms.ModelForm):
         if commit:
             prestamo.save()
         return prestamo
+
+
+class AsistenteBibliotecaForm(forms.Form):
+    pregunta = forms.CharField(
+        label="¿Qué tipo de libro buscas?",
+        max_length=500,
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "class": (
+                    "w-full border border-gray-300 rounded-lg px-3 py-2 "
+                    "focus:border-blue-600 focus:outline-none "
+                    "focus:ring-2 focus:ring-blue-100"
+                ),
+                "placeholder": (
+                    "Ejemplo: una novela colombiana sobre historia y familia"
+                ),
+            }
+        ),
+        error_messages={
+            "required": "Escribe qué tipo de libro buscas.",
+            "max_length": "La pregunta no puede superar 500 caracteres.",
+        },
+    )

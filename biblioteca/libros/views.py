@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
@@ -13,8 +15,23 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .forms import LibroForm, LoginForm, PrestamoForm, RegistroUsuarioForm
+from .forms import (
+    AsistenteBibliotecaForm,
+    LibroForm,
+    LoginForm,
+    PrestamoForm,
+    RegistroUsuarioForm,
+)
 from .models import Libro, Prestamo
+from .services.node_service import (
+    NodeServiceError,
+    generate_book_summary,
+    generate_recommendations,
+    get_overdue_notifications,
+    sync_overdue_notifications,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class InicioSesionView(LoginView):
@@ -60,6 +77,14 @@ def inicio(request):
 @permission_required("libros.view_libro", raise_exception=True)
 def detalle(request, libro_id):
     libro = get_object_or_404(Libro, pk=libro_id)
+    return render(
+        request,
+        "libros/detalle.html",
+        _detalle_context(request, libro),
+    )
+
+
+def _detalle_context(request, libro):
     prestamos = libro.prestamo_set.select_related("usuario").order_by(
         "-fecha"
     )
@@ -72,14 +97,68 @@ def detalle(request, libro_id):
             initial={"fecha": timezone.localdate()}
         )
 
+    return {
+        "libro": libro,
+        "prestamo_form": form,
+        "prestamos": prestamos,
+    }
+
+
+@login_required
+@permission_required("libros.view_libro", raise_exception=True)
+@require_POST
+def resumen_ia(request, libro_id):
+    libro = get_object_or_404(Libro, pk=libro_id)
+    book = {
+        "id": libro.id,
+        "title": libro.titulo,
+        "author": libro.autor,
+        "year": libro.año,
+    }
+    try:
+        summary = generate_book_summary(book)
+    except NodeServiceError as error:
+        logger.warning("No se pudo generar el resumen bibliográfico.", exc_info=True)
+        messages.error(request, str(error))
+        return redirect("libros:detalle", libro_id=libro.id)
+
+    context = _detalle_context(request, libro)
+    context["resumen_ia"] = summary
+    return render(request, "libros/detalle.html", context)
+
+
+@login_required
+@permission_required("libros.view_libro", raise_exception=True)
+@require_http_methods(["GET", "POST"])
+def asistente_ia(request):
+    form = AsistenteBibliotecaForm(
+        request.POST if request.method == "POST" else None
+    )
+    answer = None
+
+    if request.method == "POST" and form.is_valid():
+        catalog = [
+            {
+                "id": libro.id,
+                "title": libro.titulo,
+                "author": libro.autor,
+                "year": libro.año,
+            }
+            for libro in Libro.objects.filter(disponible=True).order_by("titulo")[:100]
+        ]
+        try:
+            answer = generate_recommendations(
+                form.cleaned_data["pregunta"],
+                catalog,
+            )
+        except NodeServiceError as error:
+            logger.warning("Falló la solicitud de recomendaciones con IA.", exc_info=True)
+            messages.error(request, str(error))
+
     return render(
         request,
-        "libros/detalle.html",
-        {
-            "libro": libro,
-            "prestamo_form": form,
-            "prestamos": prestamos,
-        },
+        "libros/asistente_ia.html",
+        {"form": form, "respuesta_ia": answer},
     )
 
 
@@ -218,11 +297,57 @@ def prestamos_vencidos(request):
         .select_related("libro", "usuario")
         .order_by("fecha_devolucion_prevista", "libro__titulo")
     )
+    try:
+        notificaciones = get_overdue_notifications()
+    except NodeServiceError as error:
+        logger.warning("No se pudo consultar el microservicio de alertas.", exc_info=True)
+        notificaciones = []
+        messages.error(request, str(error))
+
     return render(
         request,
         "libros/prestamos_vencidos.html",
-        {"prestamos": prestamos},
+        {"prestamos": prestamos, "notificaciones": notificaciones},
     )
+
+
+@login_required
+@permission_required(
+    ("libros.view_prestamo", "libros.change_prestamo"),
+    raise_exception=True,
+)
+@require_POST
+def procesar_alertas_vencidas(request):
+    prestamos = Prestamo.objects.filter(
+        estado=Prestamo.Estado.ACTIVO,
+        fecha_devolucion_prevista__lt=timezone.localdate(),
+    ).select_related("libro", "usuario")
+    loans = [
+        {
+            "loanId": prestamo.id,
+            "bookTitle": prestamo.libro.titulo,
+            "borrower": (
+                prestamo.usuario.username
+                if prestamo.usuario_id
+                else prestamo.persona.strip()
+            )
+            or "Lector sin identificar",
+            "dueDate": prestamo.fecha_devolucion_prevista.isoformat(),
+        }
+        for prestamo in prestamos
+    ]
+
+    try:
+        result = sync_overdue_notifications(loans)
+        messages.success(
+            request,
+            f"Alertas sincronizadas: {result.get('synchronized', 0)} préstamo(s).",
+        )
+    except NodeServiceError as error:
+        logger.warning("Falló la sincronización de alertas vencidas.", exc_info=True)
+        messages.error(request, str(error))
+
+    return redirect("libros:prestamos_vencidos")
 
 
 @login_required

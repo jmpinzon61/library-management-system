@@ -19,4 +19,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py setup_roles && python manage.py collectstatic --noinput && exec gunicorn biblioteca.wsgi:application --bind 0.0.0.0:${PORT:-8000}"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py setup_roles && python manage.py collectstatic --noinput && exec gunicorn biblioteca.wsgi:application --timeout 60 --bind 0.0.0.0:${PORT:-8000}"]

@@ -1,0 +1,71 @@
+<header class="bg-blue-900 text-white shadow-md">
+    <div class="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center">
+        <a href="{% url 'libros:inicio' %}" class="flex shrink-0 items-center" aria-label="Ir al catálogo de la biblioteca">
+            <img
+                src="{{ escudo_url|default:'https://d3nmwx7scpuzgc.cloudfront.net/sites/default/files/media/image/blaa-rgb-blanco.png' }}"
+                alt="Biblioteca Luis Ángel Arango"
+                class="h-12 w-auto object-contain"
+            >
+        </a>
+
+        <nav class="flex flex-wrap items-center gap-2 sm:ml-auto" aria-label="Menú principal">
+            {% if user.is_authenticated %}
+                <span class="mr-1 rounded-lg px-3 py-2 text-sm font-medium text-blue-100">
+                    {{ user.username }}
+                </span>
+                <a
+                    href="{% url 'libros:inicio' %}"
+                    class="rounded-lg border border-blue-700 px-3 py-2 text-sm font-medium text-white transition hover:border-blue-500 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-white"
+                >
+                    Catálogo
+                </a>
+                {% if user.is_staff and perms.auth.view_user %}
+                <a
+                    href="{% url 'admin:index' %}"
+                    class="rounded-lg border border-blue-700 px-3 py-2 text-sm font-medium text-white transition hover:border-blue-500 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-white"
+                >
+                    Administración
+                </a>
+                {% endif %}
+                {% if perms.libros.view_prestamo and perms.libros.change_prestamo %}
+                <a
+                    href="{% url 'libros:prestamos_vencidos' %}"
+                    class="rounded-lg border border-blue-700 px-3 py-2 text-sm font-medium text-white transition hover:border-blue-500 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-white"
+                >
+                    Préstamos vencidos{% if cantidad_prestamos_vencidos %} ({{ cantidad_prestamos_vencidos }}){% endif %}
+                </a>
+                {% endif %}
+                {% if perms.libros.view_libro %}
+                <a
+                    href="{% url 'libros:asistente_ia' %}"
+                    class="rounded-lg border border-blue-700 px-3 py-2 text-sm font-medium text-white transition hover:border-blue-500 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-white"
+                >
+                    Asistente IA
+                </a>
+                {% endif %}
+                <form action="{% url 'libros:logout' %}" method="post">
+                    {% csrf_token %}
+                    <button
+                        type="submit"
+                        class="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-blue-900 shadow-sm transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-900"
+                    >
+                        Cerrar sesión
+                    </button>
+                </form>
+            {% else %}
+                <a
+                    href="{% url 'libros:login' %}"
+                    class="rounded-lg border border-blue-700 px-3 py-2 text-sm font-medium text-white transition hover:border-blue-500 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-white"
+                >
+                    Iniciar sesión
+                </a>
+                <a
+                    href="{% url 'libros:registro' %}"
+                    class="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-blue-900 shadow-sm transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-900"
+                >
+                    Crear cuenta
+                </a>
+            {% endif %}
+        </nav>
+    </div>
+</header>

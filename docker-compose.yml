@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: biblioteca
+      POSTGRES_USER: biblioteca
+      POSTGRES_PASSWORD: biblioteca-local
+    volumes:
+      - biblioteca_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U biblioteca -d biblioteca"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  django:
+    build:
+      context: ./biblioteca
+      dockerfile: Dockerfile
+    environment:
+      DEBUG: "true"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Define DJANGO_SECRET_KEY en .env}
+      ALLOWED_HOSTS: localhost,127.0.0.1
+      DATABASE_URL: postgresql://biblioteca:biblioteca-local@db:5432/biblioteca?sslmode=disable
+      NODE_SERVICE_URL: http://alertas:3000
+      NODE_SERVICE_TOKEN: ${NODE_SERVICE_TOKEN:?Define NODE_SERVICE_TOKEN en .env}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      alertas:
+        condition: service_healthy
+
+  alertas:
+    build:
+      context: ./microservicios/alertas
+      dockerfile: Dockerfile
+    environment:
+      PORT: "3000"
+      DATABASE_URL: postgresql://biblioteca:biblioteca-local@db:5432/biblioteca?sslmode=disable
+      NODE_SERVICE_TOKEN: ${NODE_SERVICE_TOKEN:?Define NODE_SERVICE_TOKEN en .env}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  biblioteca_db:

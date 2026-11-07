@@ -14,6 +14,28 @@ services:
         fromDatabase:
           name: biblioteca-db
           property: connectionString
+      - key: NODE_SERVICE_URL
+        value: https://biblioteca-alertas-api.onrender.com
+      - key: NODE_SERVICE_TOKEN
+        sync: false
+
+  - type: web
+    name: biblioteca-alertas-api
+    runtime: node
+    plan: free
+    rootDir: microservicios/alertas
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: biblioteca-db
+          property: connectionString
+      - key: NODE_SERVICE_TOKEN
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
 
 databases:
   - name: biblioteca-db

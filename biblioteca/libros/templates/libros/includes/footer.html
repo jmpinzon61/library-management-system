@@ -1,0 +1,43 @@
+<footer class="mt-auto border-t border-blue-950 bg-blue-950 text-blue-100">
+    <div class="mx-auto grid max-w-7xl gap-8 px-5 py-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div>
+            <p class="text-lg font-semibold text-white">Biblioteca BLAA</p>
+            <p class="mt-2 max-w-sm text-sm leading-6 text-blue-200">
+                Sistema de gestión bibliotecaria para consultar el catálogo y apoyar la administración de préstamos.
+            </p>
+        </div>
+
+        <div>
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-white">Accesos rápidos</h2>
+            <ul class="mt-3 space-y-2 text-sm">
+                {% if user.is_authenticated %}
+                <li><a href="{% url 'libros:inicio' %}" class="hover:text-white hover:underline">Catálogo</a></li>
+                {% if perms.libros.view_libro %}
+                <li><a href="{% url 'libros:asistente_ia' %}" class="hover:text-white hover:underline">Asistente bibliográfico</a></li>
+                {% endif %}
+                {% if perms.libros.view_prestamo and perms.libros.change_prestamo %}
+                <li><a href="{% url 'libros:prestamos_vencidos' %}" class="hover:text-white hover:underline">Préstamos vencidos</a></li>
+                {% endif %}
+                {% else %}
+                <li><a href="{% url 'libros:login' %}" class="hover:text-white hover:underline">Iniciar sesión</a></li>
+                <li><a href="{% url 'libros:registro' %}" class="hover:text-white hover:underline">Crear cuenta</a></li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div>
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-white">Información</h2>
+            <p class="mt-3 text-sm leading-6 text-blue-200">
+                Proyecto académico · Fundación Universitaria UNINPAHU · 2026
+            </p>
+            <p class="mt-3 text-xs text-blue-300">
+                Los contenidos generados con IA deben verificarse antes de usarse.
+            </p>
+        </div>
+    </div>
+    <div class="border-t border-blue-900">
+        <p class="mx-auto max-w-7xl px-5 py-4 text-xs text-blue-300">
+            © 2026 Sistema de Gestión Bibliotecaria
+        </p>
+    </div>
+</footer>
