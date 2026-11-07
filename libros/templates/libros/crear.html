@@ -3,27 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registrar Nuevo Libro</title>
+    <title>Registrar libro | Biblioteca</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50 p-6 md:p-10 flex items-center justify-center min-h-screen">
-
-    <div class="max-w-md w-full bg-white rounded-xl shadow-md border border-gray-200 p-6 md:p-8">
-        <h1 class="text-2xl font-bold text-gray-800 mb-6">Registrar Nuevo Libro</h1>
-
-        {% if error_message %}
-            <p class="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm"><strong>{{ error_message }}</strong></p>
-        {% endif %}
-
-        <form method="post">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit">Guardar</button>
-        </form>
-
-        <div class="text-center">
-            <a href="{% url 'libros:inicio' %}" class="text-sm text-blue-600 hover:underline font-medium">Volver a la biblioteca</a>
+<body class="min-h-screen bg-gray-50">
+    <header class="bg-blue-900 text-white shadow-md">
+        <div class="mx-auto flex max-w-5xl items-center gap-4 px-5 py-5">
+            <img
+                src="https://d3nmwx7scpuzgc.cloudfront.net/sites/default/files/media/image/blaa-rgb-blanco.png"
+                alt="Biblioteca Luis Ángel Arango"
+                class="h-12 object-contain"
+            >
+            <div class="ml-auto flex items-center gap-4">
+                <span>{{ user.username }}</span>
+                <form action="{% url 'libros:logout' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="underline">Cerrar sesión</button>
+                </form>
+            </div>
         </div>
-    </div>
+    </header>
+
+    <main class="mx-auto max-w-xl p-6 md:pt-10">
+        <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-md md:p-8">
+            <h1 class="mb-2 text-2xl font-bold text-gray-800">Registrar nuevo libro</h1>
+            <p class="mb-6 text-gray-600">Completa los datos para agregar un libro al catálogo.</p>
+
+            {% if form.non_field_errors %}
+                <div class="mb-4 rounded-lg bg-red-100 p-3 text-sm text-red-700">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <form method="post" class="space-y-5">
+                {% csrf_token %}
+                {% for field in form %}
+                    {% if field.name == "disponible" %}
+                        <div>
+                            <label for="{{ field.id_for_label }}" class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                {{ field }}
+                                {{ field.label }}
+                            </label>
+                        </div>
+                    {% else %}
+                        <div>
+                            <label for="{{ field.id_for_label }}" class="mb-1 block text-sm font-medium text-gray-700">
+                                {{ field.label }}
+                            </label>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                    {% if field.errors %}
+                        <div class="text-sm text-red-600">{{ field.errors }}</div>
+                    {% endif %}
+                {% endfor %}
+
+                <div class="flex flex-col gap-3 border-t border-gray-200 pt-5 sm:flex-row">
+                    <button
+                        type="submit"
+                        class="rounded-lg bg-blue-600 px-5 py-2.5 font-medium text-white shadow transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    >
+                        Guardar libro
+                    </button>
+                    <a
+                        href="{% url 'libros:inicio' %}"
+                        class="rounded-lg border border-blue-200 px-5 py-2.5 text-center font-medium text-blue-700 transition hover:bg-blue-50"
+                    >
+                        Volver al catálogo
+                    </a>
+                </div>
+            </form>
+        </section>
+    </main>
 </body>
 </html>

@@ -94,6 +94,25 @@ class RegistroUsuarioForm(UserCreationForm):
 
 
 class LibroForm(forms.ModelForm):
+    año = forms.IntegerField(
+        label="Año de publicación",
+        min_value=1000,
+        max_value=9999,
+        widget=forms.NumberInput(
+            attrs={
+                "min": 1000,
+                "max": 9999,
+                "step": 1,
+                "inputmode": "numeric",
+            }
+        ),
+        error_messages={
+            "required": "Escribe el año de publicación.",
+            "invalid": "Escribe el año con números, por ejemplo 1967.",
+            "min_value": "El año debe tener cuatro dígitos.",
+            "max_value": "El año no puede superar cuatro dígitos.",
+        },
+    )
     imagen_url = forms.URLField(
         required=False,
         error_messages={
@@ -118,9 +137,17 @@ class LibroForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
-            field.widget.attrs["class"] = (
-                "border border-gray-300 rounded-lg px-3 py-2"
-            )
+            if isinstance(field, forms.BooleanField):
+                field.widget.attrs["class"] = (
+                    "h-4 w-4 rounded border-gray-300 text-blue-700 "
+                    "focus:ring-blue-600"
+                )
+            else:
+                field.widget.attrs["class"] = (
+                    "w-full border border-gray-300 rounded-lg px-3 py-2 "
+                    "focus:border-blue-600 focus:outline-none "
+                    "focus:ring-2 focus:ring-blue-100"
+                )
 
 
 class PrestamoForm(forms.ModelForm):
