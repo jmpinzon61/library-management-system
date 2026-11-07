@@ -74,6 +74,38 @@ class MensajesDeValidacionTests(TestCase):
             form.errors["imagen_url"][0],
         )
 
+    def test_libro_acepta_anio_de_cuatro_digitos_como_1967(self):
+        form = LibroForm(
+            data={
+                "titulo": "Cien años de soledad",
+                "autor": "Gabriel García Márquez",
+                "año": "1967",
+                "imagen_url": "",
+                "disponible": "on",
+            }
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["año"], 1967)
+        self.assertEqual(form.fields["año"].widget.input_type, "number")
+        self.assertEqual(form.fields["año"].widget.attrs["min"], 1000)
+        self.assertEqual(form.fields["año"].widget.attrs["max"], 9999)
+
+    def test_libro_rechaza_anios_que_no_tengan_cuatro_digitos(self):
+        for año in ("967", "10000"):
+            with self.subTest(año=año):
+                form = LibroForm(
+                    data={
+                        "titulo": "Libro",
+                        "autor": "Autor",
+                        "año": año,
+                        "disponible": "on",
+                    }
+                )
+
+                self.assertFalse(form.is_valid())
+                self.assertIn("año", form.errors)
+
     def test_prestamo_muestra_errores_de_fecha_en_espanol(self):
         form = PrestamoForm(data={"fecha": "fecha-invalida"})
 
@@ -294,7 +326,8 @@ class ImagenLibroTests(TestCase):
             {
                 "titulo": "Libro del bibliotecario",
                 "autor": "Autor",
-                "a?o": 2025,
+                "a\u00f1o": 2025,
+                "disponible": "on",
             },
         )
         self.assertRedirects(create_response, reverse("libros:inicio"))
