@@ -83,6 +83,4 @@ cambios de `render.yaml`, configura el mismo `NODE_SERVICE_TOKEN` en los
 servicios Django y Node, y configura `GEMINI_API_KEY` solo en Node. Mantén
 estas variables en el dashboard de Render, no en Git.
 
-Genera un token aleatorio de al menos 32 caracteres y coloca exactamente el
-mismo valor en ambos servicios. Las alertas internas se muestran a usuarios
-con permisos de Bibliotecario o Administrador; no se envían por correo.
+Genera un token aleatorio de al menos 32 caracteres y coloca exactamente el mismo valor en ambos servicios. Las alertas internas se muestran a usuarios con permisos de Bibliotecario o Administrador; no se envían por correo.
